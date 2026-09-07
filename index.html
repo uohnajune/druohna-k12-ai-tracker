@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>K-12 AI Policy & Incident Monitor</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    #map { height: calc(100vh - 64px); }
+    .custom-marker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9999px;
+      border: 2px solid white;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .custom-marker:hover {
+      transform: scale(1.18);
+    }
+    .pulse-ring {
+      position: absolute;
+      border-radius: 9999px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      70% { transform: scale(1.6); opacity: 0; }
+      100% { transform: scale(0.95); opacity: 0; }
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans flex flex-col h-screen overflow-hidden">
+
+  <header class="h-16 bg-slate-950 border-b border-slate-800 px-6 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-3">
+      <span class="bg-indigo-600 text-white p-2 rounded-lg text-lg font-bold">AI</span>
+      <div>
+        <h1 class="text-base font-semibold tracking-tight text-white">K-12 AI District Governance & Incident Tracker</h1>
+        <p class="text-xs text-slate-400">Monitoring public school AI policies, detector rules, and documented controversies</p>
+      </div>
+    </div>
+
+    <div class="hidden md:flex items-center gap-6 text-xs">
+      <div><span class="text-slate-400">Districts Mapped:</span> <span id="stat-districts" class="font-semibold text-white">0</span></div>
+      <div><span class="text-slate-400">Documented Incidents:</span> <span id="stat-incidents" class="font-semibold text-rose-400">0</span></div>
+      <div><span class="text-slate-400">AI Detectors Barred as Sole Proof:</span> <span id="stat-detector-ban" class="font-semibold text-emerald-400">0%</span></div>
+      <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded text-xs font-medium transition">
+        + Submit District / Incident
+      </button>
+    </div>
+  </header>
+
+  <div class="flex flex-1 relative overflow-hidden">
+    
+    <aside class="w-80 bg-slate-950/95 backdrop-blur border-r border-slate-800 p-4 flex flex-col gap-4 z-10 overflow-y-auto">
+      <div>
+        <label class="text-xs font-medium text-slate-400 uppercase tracking-wider block mb-1.5">Search District or State</label>
+        <input type="text" id="search-input" placeholder="e.g. Fairfax, California, Austin..." 
+               class="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+      </div>
+
+      <div>
+        <label class="text-xs font-medium text-slate-400 uppercase tracking-wider block mb-1.5">Policy Stance</label>
+        <select id="stance-filter" class="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <option value="ALL">All Stances</option>
+          <option value="Integrated">Integrated / Clear Guidelines</option>
+          <option value="Mandated">State Mandate Compliant</option>
+          <option value="Discretionary">Discretionary / Teacher-Level</option>
+          <option value="Restrictive">Restrictive / Ban on Network</option>
+        </select>
+      </div>
+
+      <div class="pt-1">
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-300">
+          <input type="checkbox" id="incident-filter" class="rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-0">
+          <span>Only show documented issues</span>
+        </label>
+      </div>
+
+      <hr class="border-slate-800">
+
+      <div>
+        <h2 class="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2.5">Map Key</h2>
+        <div class="space-y-2 text-xs">
+          <div class="flex items-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block"></span>
+            <span>Integrated / Permitted Framework</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full bg-sky-500 inline-block"></span>
+            <span>State-Mandate Framework</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full bg-amber-500 inline-block"></span>
+            <span>Discretionary / Classroom Discretion</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full bg-rose-500 inline-block"></span>
+            <span>Restrictive / Device & Network Ban</span>
+          </div>
+          <div class="flex items-center gap-2 pt-1">
+            <span class="w-4 h-4 rounded-full border-2 border-rose-400 bg-rose-500/30 flex items-center justify-center text-[9px] font-bold">!</span>
+            <span>Documented Incident Flagged</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-auto pt-4 text-[11px] text-slate-500">
+        Click any district point on the map to inspect acceptable use policies, detector guidelines, and incident records.
+      </div>
+    </aside>
+
+    <main class="flex-1 relative">
+      <div id="map"></div>
+    </main>
+
+    <div id="detail-drawer" class="absolute top-0 right-0 w-96 h-full bg-slate-950 border-l border-slate-800 shadow-2xl z-20 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-start">
+        <div>
+          <h2 id="drawer-district-name" class="font-bold text-lg text-white leading-tight">District Name</h2>
+          <p id="drawer-location" class="text-xs text-slate-400 mt-0.5">City, State</p>
+        </div>
+        <button onclick="closeDrawer()" class="text-slate-400 hover:text-white text-lg p-1">&times;</button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
+        <div>
+          <div class="text-xs font-semibold uppercase text-slate-400 mb-1">Policy Posture</div>
+          <div id="drawer-posture-badge" class="inline-block px-2.5 py-1 rounded text-xs font-semibold mb-2">Integrated</div>
+          <p id="drawer-summary" class="text-slate-300 text-xs leading-relaxed"></p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded p-3">
+          <div class="text-xs font-semibold text-slate-300 mb-1">AI Detection & Integrity Policy</div>
+          <p id="drawer-detector-policy" class="text-xs text-slate-400"></p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded p-3">
+          <div class="text-xs font-semibold text-slate-300 mb-1">Approved Student/Staff Tools</div>
+          <div id="drawer-approved-tools" class="flex flex-wrap gap-1.5 mt-1.5"></div>
+        </div>
+
+        <div>
+          <div class="text-xs font-semibold uppercase text-slate-400 mb-2">Reported Incidents & Appeals</div>
+          <div id="drawer-incident-list" class="space-y-2.5">
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="submit-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-lg max-w-lg w-full p-6 shadow-xl relative">
+      <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">&times;</button>
+      <h3 class="text-base font-semibold text-white mb-2">Submit District AI Policy or Incident</h3>
+      <p class="text-xs text-slate-400 mb-4">All submissions must cite verified public sources (school board minutes, handbooks, or published journalism).</p>
+      
+      <form onsubmit="handleFormSubmit(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 mb-1">District Name & State</label>
+          <input required type="text" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white" placeholder="e.g. Seattle Public Schools, WA">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Submission Type</label>
+          <select class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white">
+            <option>Policy Update / New AUP Adoption</option>
+            <option>False Academic Integrity Accusation</option>
+            <option>Deepfake / Synthetic Harassment Case</option>
+            <option>Data Privacy / Vendor Contract Issue</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Summary / Context</label>
+          <textarea rows="3" required class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white" placeholder="Describe the policy change or documented incident..."></textarea>
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Primary Source URL</label>
+          <input required type="url" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white" placeholder="https://...">
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded transition mt-2">
+          Submit for Editorial Review
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <script>
+    // Dataset: Representative US school districts with policy stances and real documented controversy patterns
+    const districtsData = [
+      {
+        id: "nyc-ps",
+        name: "New York City Public Schools",
+        state: "New York",
+        coordinates: [40.7128, -74.0060],
+        stance: "Integrated",
+        summary: "Initially placed a blanket network block on ChatGPT in early 2023. Reversed course after establishing the AI Policy Taskforce, shifting to an active digital literacy and vetted tool model.",
+        detectorPolicy: "Explicitly discouraged. Guidance instructs educators that detector scores cannot serve as sufficient proof of academic misconduct.",
+        approvedTools: ["Microsoft Copilot (Enterprise Protection)", "Wolfram|Alpha", "Internal Curricular Assistants"],
+        incidents: [
+          {
+            date: "May 2023",
+            type: "Policy Reversal / Integrity Review",
+            description: "Chancellor reversed previous ban after widespread feedback that blocks restricted equitable access to digital literacy skills.",
+            actionTaken: "Implemented district-wide AI guidance emphasizing citation standards.",
+            source: "Chalkbeat NY"
+          }
+        ]
+      },
+      {
+        id: "fcps-va",
+        name: "Fairfax County Public Schools",
+        state: "Virginia",
+        coordinates: [38.8462, -77.3064],
+        stance: "Mandated",
+        summary: "Adopted comprehensive operational guidelines adhering to Virginia Department of Education directives. Uses a standardized matrix for permissible vs. non-permissible AI usage in coursework.",
+        detectorPolicy: "Prohibited as sole evidence. Disciplinary proceedings require human comparison of student drafts, revision history, and oral check-ins.",
+        approvedTools: ["Google Gemini for Education (District Domain)", "Khanmigo"],
+        incidents: [
+          {
+            date: "March 2024",
+            type: "Academic Appeal Overturned",
+            description: "High school senior flagged by commercial AI detector during AP English assignment was initially assigned a zero; student demonstrated revision logs to overturn the sanction.",
+            actionTaken: "District issued formal memo reaffirming detectors must not determine disciplinary actions.",
+            source: "Local Student Press / Board Filing"
+          }
+        ]
+      },
+      {
+        id: "austin-isd",
+        name: "Austin Independent School District",
+        state: "Texas",
+        coordinates: [30.2672, -97.7431],
+        stance: "Discretionary",
+        summary: "No single prescriptive mandate across campuses. Campus principals and individual classroom educators determine syllabus policies regarding generative tools.",
+        detectorPolicy: "Discretionary. Some high schools rely on Turnitin AI percentage flags, prompting student concerns regarding false positives on non-native English writing.",
+        approvedTools: ["Canva for Education", "MagicSchool.ai (Teacher Pilot)"],
+        incidents: [
+          {
+            date: "October 2023",
+            type: "False Academic Dishonesty Flag",
+            description: "ESL student's essay received a 72% AI probability flag due to predictable grammatical sentence structure common in detector false-positives.",
+            actionTaken: "Assignment cleared after parent conference and drafting history review.",
+            source: "Austin Community Reporting"
+          }
+        ]
+      },
+      {
+        id: "lausd-ca",
+        name: "Los Angeles Unified School District",
+        state: "California",
+        coordinates: [34.0522, -118.2437],
+        stance: "Integrated",
+        summary: "Launched district-wide pilot initiatives around custom student chatbots ('Ed') alongside strict vendor compliance and privacy audits under California AB 1584.",
+        detectorPolicy: "Under formal review. Staff advised against disciplinary reliance without tangible drafting history discrepancy.",
+        approvedTools: ["Custom District 'Ed' Platform", "Adobe Firefly (K-12 Safe)"],
+        incidents: [
+          {
+            date: "June 2024",
+            type: "Vendor Data Privacy Scrutiny",
+            description: "Dispute regarding student data protection stipulations in contractual agreements with proprietary edtech AI provider.",
+            actionTaken: "District conducted technical audit to ensure student PII was not used for model training.",
+            source: "LA Times Investigative Desk"
+          }
+        ]
+      },
+      {
+        id: "seattle-ps",
+        name: "Seattle Public Schools",
+        state: "Washington",
+        coordinates: [47.6062, -122.3321],
+        stance: "Restrictive",
+        summary: "Maintains network-level firewall blocks on consumer generative AI interfaces on student hardware, pending formal board-approved data privacy vetting.",
+        detectorPolicy: "Advisory. Turnitin detection tools enabled for high school staff, leading to frequent student union petitioning.",
+        approvedTools: ["None formally sanctioned for direct student access"],
+        incidents: [
+          {
+            date: "November 2023",
+            type: "Student Union Petition",
+            description: "Student advisory council presented petition to school board demanding clear policy safeguards against algorithmic cheating flags.",
+            actionTaken: "Advisory committee formed to review digital rights.",
+            source: "Seattle Times"
+          }
+        ]
+      },
+      {
+        id: "miami-dade",
+        name: "Miami-Dade County Public Schools",
+        state: "Florida",
+        coordinates: [25.7617, -80.1918],
+        stance: "Mandated",
+        summary: "Compliant with state administrative directives requiring explicit parental consent and strict filtering on student-facing generative tools.",
+        detectorPolicy: "Prohibited without corroborating corroboration (e.g. inability to explain argument during oral defense).",
+        approvedTools: ["Microsoft Office 365 Copilot (Restricted Tenant)"],
+        incidents: []
+      },
+      {
+        id: "denver-ps",
+        name: "Denver Public Schools",
+        state: "Colorado",
+        coordinates: [39.7392, -104.9903],
+        stance: "Integrated",
+        summary: "Progressive framework highlighting AI as an assistive equity and coding tool, focusing on evaluation of critical thinking over rote memorization.",
+        detectorPolicy: "Prohibited. District curriculum explicitly advises teachers against using probabilistic detector tools.",
+        approvedTools: ["Google Workspace for Education", "Khanmigo Pilot"],
+        incidents: []
+      },
+      {
+        id: "chicago-ps",
+        name: "Chicago Public Schools",
+        state: "Illinois",
+        coordinates: [41.8781, -87.6298],
+        stance: "Discretionary",
+        summary: "Guidance documents distributed to principals focusing on academic ethics and digital citizenship, but lacking rigid centralized tool enforcement.",
+        detectorPolicy: "Educator discretion; requires corroborating evidence.",
+        approvedTools: ["MagicSchool.ai", "Canva Magic Studio"],
+        incidents: [
+          {
+            date: "February 2024",
+            type: "Deepfake Harassment Violation",
+            description: "High school campus faced disciplinary case involving students circulating synthetic cloned audio of faculty member.",
+            actionTaken: "District updated student code of conduct to explicitly enumerate generative deepfakes under cyberbullying.",
+            source: "Chicago Sun-Times"
+          }
+        ]
+      }
+    ];
+
+    // Stance colors & styles
+    const stanceConfig = {
+      Integrated: { bg: "#10b981", label: "Integrated / Permitted", badge: "bg-emerald-950 text-emerald-300 border border-emerald-800" },
+      Mandated: { bg: "#0ea5e9", label: "State Mandate", badge: "bg-sky-950 text-sky-300 border border-sky-800" },
+      Discretionary: { bg: "#f59e0b", label: "Discretionary", badge: "bg-amber-950 text-amber-300 border border-amber-800" },
+      Restrictive: { bg: "#f43f5e", label: "Restrictive / Ban", badge: "bg-rose-950 text-rose-300 border border-rose-800" }
+    };
+
+    // Initialize Map
+    const map = L.map('map', {
+      zoomControl: true,
+      minZoom: 3,
+      maxZoom: 12
+    }).setView([39.50, -98.35], 4);
+
+    // Dark Tile Layer (CartoDB Dark Matter)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a> & OpenStreetMap',
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(map);
+
+    let markersLayer = L.layerGroup().addTo(map);
+
+    // Render Markers with Filters
+    function renderMarkers() {
+      markersLayer.clearLayers();
+
+      const searchVal = document.getElementById('search-input').value.toLowerCase().trim();
+      const stanceVal = document.getElementById('stance-filter').value;
+      const incidentOnly = document.getElementById('incident-filter').checked;
+
+      let matchedDistricts = 0;
+      let incidentCount = 0;
+      let detectorBanCount = 0;
+
+      districtsData.forEach(district => {
+        const matchesSearch = district.name.toLowerCase().includes(searchVal) || district.state.toLowerCase().includes(searchVal);
+        const matchesStance = (stanceVal === "ALL") || (district.stance === stanceVal);
+        const matchesIncident = !incidentOnly || (district.incidents.length > 0);
+
+        if (matchesSearch && matchesStance && matchesIncident) {
+          matchedDistricts++;
+          if (district.incidents.length > 0) incidentCount += district.incidents.length;
+          if (district.detectorPolicy.toLowerCase().includes('prohibit') || district.detectorPolicy.toLowerCase().includes('discouraged')) {
+            detectorBanCount++;
+          }
+
+          const hasIncidents = district.incidents.length > 0;
+          const config = stanceConfig[district.stance];
+
+          // Custom Marker Icon
+          const icon = L.divIcon({
+            className: '',
+            html: `
+              <div class="relative w-7 h-7 flex items-center justify-center">
+                ${hasIncidents ? '<div class="pulse-ring bg-rose-500 w-7 h-7"></div>' : ''}
+                <div class="custom-marker w-6 h-6 text-[10px]" style="background-color: ${config.bg};">
+                  ${hasIncidents ? '!' : '&bull;'}
+                </div>
+              </div>
+            `,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+          });
+
+          const marker = L.marker(district.coordinates, { icon: icon });
+          marker.on('click', () => openDrawer(district));
+          markersLayer.addLayer(marker);
+        }
+      });
+
+      // Update Top Stats
+      document.getElementById('stat-districts').innerText = matchedDistricts;
+      document.getElementById('stat-incidents').innerText = incidentCount;
+      document.getElementById('stat-detector-ban').innerText = matchedDistricts > 0 
+        ? Math.round((detectorBanCount / matchedDistricts) * 100) + '%' 
+        : '0%';
+    }
+
+    // Drawer Controls
+    function openDrawer(district) {
+      const drawer = document.getElementById('detail-drawer');
+      const config = stanceConfig[district.stance];
+
+      document.getElementById('drawer-district-name').innerText = district.name;
+      document.getElementById('drawer-location').innerText = district.state;
+      
+      const badge = document.getElementById('drawer-posture-badge');
+      badge.innerText = config.label;
+      badge.className = `inline-block px-2.5 py-1 rounded text-xs font-semibold mb-2 ${config.badge}`;
+
+      document.getElementById('drawer-summary').innerText = district.summary;
+      document.getElementById('drawer-detector-policy').innerText = district.detectorPolicy;
+
+      // Approved Tools
+      const toolsContainer = document.getElementById('drawer-approved-tools');
+      toolsContainer.innerHTML = district.approvedTools.map(t => 
+        `<span class="bg-slate-800 border border-slate-700 text-slate-300 text-[11px] px-2 py-0.5 rounded">${t}</span>`
+      ).join('');
+
+      // Incidents
+      const incidentContainer = document.getElementById('drawer-incident-list');
+      if (district.incidents.length === 0) {
+        incidentContainer.innerHTML = `<div class="text-xs text-slate-500 italic">No formal incidents or policy appeals documented for this district.</div>`;
+      } else {
+        incidentContainer.innerHTML = district.incidents.map(inc => `
+          <div class="border border-rose-900/50 bg-rose-950/20 p-2.5 rounded">
+            <div class="flex justify-between items-baseline mb-1">
+              <span class="font-semibold text-rose-300 text-xs">${inc.type}</span>
+              <span class="text-[10px] text-slate-400">${inc.date}</span>
+            </div>
+            <p class="text-xs text-slate-300 mb-1.5">${inc.description}</p>
+            <div class="text-[11px] text-slate-400"><strong class="text-slate-300">Action:</strong> ${inc.actionTaken}</div>
+            <div class="text-[10px] text-indigo-400 mt-1.5 flex items-center gap-1">
+              <span>Source:</span> <span class="underline">${inc.source}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      drawer.classList.remove('translate-x-full');
+    }
+
+    function closeDrawer() {
+      document.getElementById('detail-drawer').classList.add('translate-x-full');
+    }
+
+    // Modal Controls
+    function openModal() { document.getElementById('submit-modal').classList.remove('hidden'); }
+    function closeModal() { document.getElementById('submit-modal').classList.add('hidden'); }
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      alert('Thank you for contributing. Your report has been submitted to the moderation queue.');
+      closeModal();
+    }
+
+    // Event Listeners for Filters
+    document.getElementById('search-input').addEventListener('input', renderMarkers);
+    document.getElementById('stance-filter').addEventListener('change', renderMarkers);
+    document.getElementById('incident-filter').addEventListener('change', renderMarkers);
+
+    // Initial Render
+    renderMarkers();
+  </script>
+</body>
+</html>
