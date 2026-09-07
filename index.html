@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>K-12 AI Policy & Incident Monitor</title>
   
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
   <style>
-    #map { height: calc(100vh - 64px); }
+    #map { height: calc(100vh - 64px); width: 100%; }
     .custom-marker {
       display: flex;
       align-items: center;
@@ -39,6 +41,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans flex flex-col h-screen overflow-hidden">
 
+  <!-- Top Navigation -->
   <header class="h-16 bg-slate-950 border-b border-slate-800 px-6 flex items-center justify-between shrink-0">
     <div class="flex items-center gap-3">
       <span class="bg-indigo-600 text-white p-2 rounded-lg text-lg font-bold">AI</span>
@@ -48,6 +51,7 @@
       </div>
     </div>
 
+    <!-- Quick Stats Bar -->
     <div class="hidden md:flex items-center gap-6 text-xs">
       <div><span class="text-slate-400">Districts Mapped:</span> <span id="stat-districts" class="font-semibold text-white">0</span></div>
       <div><span class="text-slate-400">Documented Incidents:</span> <span id="stat-incidents" class="font-semibold text-rose-400">0</span></div>
@@ -58,8 +62,10 @@
     </div>
   </header>
 
+  <!-- Main Container -->
   <div class="flex flex-1 relative overflow-hidden">
     
+    <!-- Filter Sidebar -->
     <aside class="w-80 bg-slate-950/95 backdrop-blur border-r border-slate-800 p-4 flex flex-col gap-4 z-10 overflow-y-auto">
       <div>
         <label class="text-xs font-medium text-slate-400 uppercase tracking-wider block mb-1.5">Search District or State</label>
@@ -87,6 +93,7 @@
 
       <hr class="border-slate-800">
 
+      <!-- Map Legend -->
       <div>
         <h2 class="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2.5">Map Key</h2>
         <div class="space-y-2 text-xs">
@@ -118,10 +125,12 @@
       </div>
     </aside>
 
+    <!-- Map Viewport -->
     <main class="flex-1 relative">
       <div id="map"></div>
     </main>
 
+    <!-- District Details Slide-Out Drawer -->
     <div id="detail-drawer" class="absolute top-0 right-0 w-96 h-full bg-slate-950 border-l border-slate-800 shadow-2xl z-20 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
       <div class="p-4 border-b border-slate-800 flex justify-between items-start">
         <div>
@@ -156,6 +165,7 @@
     </div>
   </div>
 
+  <!-- Submission Modal -->
   <div id="submit-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-lg max-w-lg w-full p-6 shadow-xl relative">
       <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">&times;</button>
@@ -191,10 +201,10 @@
     </div>
   </div>
 
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   
   <script>
-    // Dataset: Representative US school districts with policy stances and real documented controversy patterns
     const districtsData = [
       {
         id: "nyc-ps",
@@ -202,7 +212,7 @@
         state: "New York",
         coordinates: [40.7128, -74.0060],
         stance: "Integrated",
-        summary: "Initially placed a blanket network block on ChatGPT in early 2023. Reversed course after establishing the AI Policy Taskforce, shifting to an active digital literacy and vetted tool framework.",
+        summary: "Initially placed a blanket network block on ChatGPT in early 2023. Shifted to an active digital literacy and vetted tool model.",
         detectorPolicy: "Explicitly discouraged. Guidance instructs educators that detector scores cannot serve as sufficient proof of academic misconduct.",
         approvedTools: ["Microsoft Copilot (Enterprise Protection)", "Wolfram|Alpha", "Internal Curricular Assistants"],
         incidents: [
@@ -221,9 +231,9 @@
         state: "Virginia",
         coordinates: [38.8462, -77.3064],
         stance: "Mandated",
-        summary: "Adopted comprehensive operational guidelines adhering to Virginia Department of Education directives. Uses a standardized matrix for permissible vs. non-permissible AI usage in instruction and assessment.",
+        summary: "Adopted comprehensive operational guidelines adhering to Virginia Department of Education directives.",
         detectorPolicy: "Prohibited as sole evidence. Disciplinary proceedings require human comparison of student drafts, revision history, and oral check-ins.",
-        approvedTools: ["Google Gemini for Education (District Domain)", "Khanmigo"],
+        approvedTools: ["Google Gemini for Education", "Khanmigo"],
         incidents: [
           {
             date: "March 2024",
@@ -240,9 +250,9 @@
         state: "Texas",
         coordinates: [30.2672, -97.7431],
         stance: "Discretionary",
-        summary: "No single prescriptive mandate across campuses. Campus principals and individual classroom educators determine syllabus policies regarding generative tools.",
-        detectorPolicy: "Discretionary. Some high schools rely on Turnitin AI percentage flags, prompting student concerns regarding false positives on non-native English writing.",
-        approvedTools: ["Canva for Education", "MagicSchool.ai (Teacher Pilot)"],
+        summary: "No single prescriptive mandate across campuses. Campus principals and individual classroom educators determine syllabus policies.",
+        detectorPolicy: "Discretionary. Some high schools rely on Turnitin AI flags, prompting student concerns regarding false positives.",
+        approvedTools: ["Canva for Education", "MagicSchool.ai"],
         incidents: [
           {
             date: "October 2023",
@@ -259,9 +269,9 @@
         state: "California",
         coordinates: [34.0522, -118.2437],
         stance: "Integrated",
-        summary: "Launched district-wide pilot initiatives around custom student chatbots ('Ed') alongside strict vendor compliance and privacy audits under California AB 1584.",
+        summary: "Piloted custom student chatbots ('Ed') alongside strict vendor compliance and privacy audits under California AB 1584.",
         detectorPolicy: "Under formal review. Staff advised against disciplinary reliance without tangible drafting history discrepancy.",
-        approvedTools: ["Custom District 'Ed' Platform", "Adobe Firefly (K-12 Safe)"],
+        approvedTools: ["Custom District 'Ed' Platform", "Adobe Firefly"],
         incidents: [
           {
             date: "June 2024",
@@ -278,8 +288,8 @@
         state: "Washington",
         coordinates: [47.6062, -122.3321],
         stance: "Restrictive",
-        summary: "Maintains network-level firewall blocks on consumer generative AI interfaces on student hardware, pending formal board-approved data privacy vetting.",
-        detectorPolicy: "Advisory. Turnitin detection tools enabled for high school staff, leading to frequent student union petitioning.",
+        summary: "Maintains network-level firewall blocks on consumer generative AI interfaces on student hardware, pending formal data privacy vetting.",
+        detectorPolicy: "Advisory. Turnitin detection tools enabled for high school staff.",
         approvedTools: ["None formally sanctioned for direct student access"],
         incidents: [
           {
@@ -297,8 +307,8 @@
         state: "Florida",
         coordinates: [25.7617, -80.1918],
         stance: "Mandated",
-        summary: "Compliant with state administrative directives requiring explicit parental consent and strict filtering on student-facing generative tools.",
-        detectorPolicy: "Prohibited without corroborating corroboration (e.g. inability to explain argument during oral defense).",
+        summary: "Compliant with state administrative directives requiring explicit parental consent and strict filtering on student-facing tools.",
+        detectorPolicy: "Prohibited without corroborating physical evidence.",
         approvedTools: ["Microsoft Office 365 Copilot (Restricted Tenant)"],
         incidents: []
       },
@@ -308,7 +318,7 @@
         state: "Colorado",
         coordinates: [39.7392, -104.9903],
         stance: "Integrated",
-        summary: "Progressive framework highlighting AI as an assistive equity and coding tool, focusing on evaluation of critical thinking over rote memorization.",
+        summary: "Progressive framework highlighting AI as an assistive equity tool, focusing on evaluation of critical thinking over rote memorization.",
         detectorPolicy: "Prohibited. District curriculum explicitly advises teachers against using probabilistic detector tools.",
         approvedTools: ["Google Workspace for Education", "Khanmigo Pilot"],
         incidents: []
@@ -319,7 +329,7 @@
         state: "Illinois",
         coordinates: [41.8781, -87.6298],
         stance: "Discretionary",
-        summary: "Guidance documents distributed to principals focusing on academic ethics and digital citizenship, but lacking rigid centralized tool enforcement.",
+        summary: "Guidance documents distributed to principals focusing on academic ethics and digital citizenship without rigid tool enforcement.",
         detectorPolicy: "Educator discretion; requires corroborating evidence.",
         approvedTools: ["MagicSchool.ai", "Canva Magic Studio"],
         incidents: [
@@ -334,7 +344,6 @@
       }
     ];
 
-    // Stance colors & styles
     const stanceConfig = {
       Integrated: { bg: "#10b981", label: "Integrated / Permitted", badge: "bg-emerald-950 text-emerald-300 border border-emerald-800" },
       Mandated: { bg: "#0ea5e9", label: "State Mandate", badge: "bg-sky-950 text-sky-300 border border-sky-800" },
@@ -342,14 +351,14 @@
       Restrictive: { bg: "#f43f5e", label: "Restrictive / Ban", badge: "bg-rose-950 text-rose-300 border border-rose-800" }
     };
 
-// Initialize Map
+    // Initialize Map
     const map = L.map('map', {
       zoomControl: true,
       minZoom: 3,
       maxZoom: 12
     }).setView([39.50, -98.35], 4);
 
-    // Dark Tile Layer (Esri Dark Canvas - No API Key Needed)
+    // Esri Dark Gray (Keyless, Free)
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
       maxZoom: 16
@@ -357,20 +366,10 @@
 
     let markersLayer = L.layerGroup().addTo(map);
 
-    // Dark Tile Layer (CartoDB Dark Matter)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a> & OpenStreetMap',
-      subdomains: 'abcd',
-      maxZoom: 19
-    }).addTo(map);
-
-    let markersLayer = L.layerGroup().addTo(map);
-
-    // Render Markers with Filters
     function renderMarkers() {
       markersLayer.clearLayers();
 
-      const searchVal = document.getElementById('search-input').value.toLowerCase().trim();
+      const searchVal = (document.getElementById('search-input').value || '').toLowerCase().trim();
       const stanceVal = document.getElementById('stance-filter').value;
       const incidentOnly = document.getElementById('incident-filter').checked;
 
@@ -393,7 +392,6 @@
           const hasIncidents = district.incidents.length > 0;
           const config = stanceConfig[district.stance];
 
-          // Custom Marker Icon
           const icon = L.divIcon({
             className: '',
             html: `
@@ -414,7 +412,6 @@
         }
       });
 
-      // Update Top Stats
       document.getElementById('stat-districts').innerText = matchedDistricts;
       document.getElementById('stat-incidents').innerText = incidentCount;
       document.getElementById('stat-detector-ban').innerText = matchedDistricts > 0 
@@ -422,7 +419,6 @@
         : '0%';
     }
 
-    // Drawer Controls
     function openDrawer(district) {
       const drawer = document.getElementById('detail-drawer');
       const config = stanceConfig[district.stance];
@@ -437,13 +433,11 @@
       document.getElementById('drawer-summary').innerText = district.summary;
       document.getElementById('drawer-detector-policy').innerText = district.detectorPolicy;
 
-      // Approved Tools
       const toolsContainer = document.getElementById('drawer-approved-tools');
       toolsContainer.innerHTML = district.approvedTools.map(t => 
         `<span class="bg-slate-800 border border-slate-700 text-slate-300 text-[11px] px-2 py-0.5 rounded">${t}</span>`
       ).join('');
 
-      // Incidents
       const incidentContainer = document.getElementById('drawer-incident-list');
       if (district.incidents.length === 0) {
         incidentContainer.innerHTML = `<div class="text-xs text-slate-500 italic">No formal incidents or policy appeals documented for this district.</div>`;
@@ -470,21 +464,19 @@
       document.getElementById('detail-drawer').classList.add('translate-x-full');
     }
 
-    // Modal Controls
     function openModal() { document.getElementById('submit-modal').classList.remove('hidden'); }
     function closeModal() { document.getElementById('submit-modal').classList.add('hidden'); }
     function handleFormSubmit(e) {
       e.preventDefault();
-      alert('Thank you for contributing. Your report has been submitted to the moderation queue.');
+      alert('Submission received for review.');
       closeModal();
     }
 
-    // Event Listeners for Filters
     document.getElementById('search-input').addEventListener('input', renderMarkers);
     document.getElementById('stance-filter').addEventListener('change', renderMarkers);
     document.getElementById('incident-filter').addEventListener('change', renderMarkers);
 
-    // Initial Render
+    // Initial load
     renderMarkers();
   </script>
 </body>
