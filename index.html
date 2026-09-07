@@ -342,11 +342,20 @@
       Restrictive: { bg: "#f43f5e", label: "Restrictive / Ban", badge: "bg-rose-950 text-rose-300 border border-rose-800" }
     };
 
-// Dark Tile Layer (Esri Dark Canvas - No API Key Needed)
+// Initialize Map
+    const map = L.map('map', {
+      zoomControl: true,
+      minZoom: 3,
+      maxZoom: 12
+    }).setView([39.50, -98.35], 4);
+
+    // Dark Tile Layer (Esri Dark Canvas - No API Key Needed)
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
       maxZoom: 16
     }).addTo(map);
+
+    let markersLayer = L.layerGroup().addTo(map);
 
     // Dark Tile Layer (CartoDB Dark Matter)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
