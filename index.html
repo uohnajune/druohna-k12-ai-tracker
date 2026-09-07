@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="/druohna-k12-ai-tracker/">
   <title>K-12 AI Policy & Incident Monitor</title>
   
   <!-- Leaflet CSS -->
@@ -11,7 +12,11 @@
   <script src="https://cdn.tailwindcss.com"></script>
   
   <style>
-    #map { height: calc(100vh - 64px); width: 100%; }
+    #map {
+      height: calc(100vh - 64px);
+      min-height: 420px;
+      width: 100%;
+    }
     .custom-marker {
       display: flex;
       align-items: center;
@@ -365,6 +370,7 @@
     }).addTo(map);
 
     let markersLayer = L.layerGroup().addTo(map);
+    window.addEventListener('load', () => map.invalidateSize());
 
     function renderMarkers() {
       markersLayer.clearLayers();
